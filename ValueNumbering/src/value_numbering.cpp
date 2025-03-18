@@ -95,6 +95,13 @@ vector<string> get_dependent_expressions(unordered_map<string, vector<string > >
     return dependent_expressions[op];
 }
 
+void print_map(unordered_map<string, string> &vmap){
+    cout<<"----------------------------------------\n";
+    for(auto entry: vmap){
+        cout<<entry.first<<" -> "<<entry.second<<"\n";
+    }
+}
+
 int main(int argc, char **argv){
     cout<<"Reading file "<<argv[1]<<"\n";
     vector<string> lines;
@@ -111,27 +118,45 @@ int main(int argc, char **argv){
     StmtElements current;
     // pass 1: read all lines, construct the live expressions, their value name, replace live expressions, add copy operations
     for(auto line: lines){
+        string top1, top2;
         current = get_elements(line, stmtpat);
-        cout<<current<<"\n";
-        string rexpr = get_exp_key(current);
+        //cout<<current<<"\n";
         StmtElements newCopy;
         newCopy.res = "";
+        // replace operands with their value number if they exist, else add them
+        if (value_map.find(current.op1)!=value_map.end()){
+            top1 = current.op1;
+            current.op1 = value_map[current.op1];
+        }else{
+            value_map.insert_or_assign(current.op1, current.op1);
+        }
+        if (value_map.find(current.op2)!=value_map.end()){
+            top2 = current.op2;
+            current.op2 = value_map[current.op2];
+        }else{
+            value_map.insert_or_assign(current.op2, current.op2);
+        }
+        // print_map(value_map);
+        used_map[current.op1] = true;
+        used_map[current.op2] = true;
+        // calculate the right expression after replacing operands with their mapped value
+        string rexpr = get_exp_key(current);
         // if the expression on the right side is present in value map, then replace it with value name
         if(value_map.find(rexpr) != value_map.end()){
             current.op1 = value_map[rexpr];
             current.op = "";
             current.op2 = "";
-            used_map.emplace(value_map[rexpr], true);
+            used_map.insert_or_assign(value_map[rexpr], true);
             current.comment = "Replaced "+rexpr+" with "+value_map[rexpr];
         }else{
             // if it is not present then add it to value map with a new value name and make the expression dependent on the operands
-            value_map.emplace(rexpr, new_value_name());
+            value_map.insert_or_assign(rexpr, new_value_name());
             vector<string> t = get_dependent_expressions(dependent_expressions, current.op1);
             t.push_back(rexpr);
-            dependent_expressions.emplace(current.op1, t);
+            dependent_expressions.insert_or_assign(current.op1, t);
             t = get_dependent_expressions(dependent_expressions, current.op2);
             t.push_back(rexpr);
-            dependent_expressions.emplace(current.op2, t);
+            dependent_expressions.insert_or_assign(current.op2, t);
             newCopy.res = value_map[rexpr];
             newCopy.op1 = current.res;
             newCopy.op = "";
@@ -139,27 +164,37 @@ int main(int argc, char **argv){
         }
         //kill all the expressions that include the result as operand and are live
         vector<string> dependent_exprs = get_dependent_expressions(dependent_expressions, current.res);
+        value_map.insert_or_assign(current.res, value_map[rexpr]);
         for(auto expr: dependent_exprs){
-            value_map.erase(expr);
+            /*
+            if (expr != rexpr){
+                cout<<"Deleting "<<expr<<"\n";
+                value_map.erase(expr);
+            }
+            */
+           value_map.erase(expr);
         }
         dependent_expressions.erase(current.res);
-        cout<<"Pushing back current: "<<current<<"\n";
+        //cout<<"Pushing back current: "<<current<<"\n";
         statements.push_back(current);
         if(newCopy.res != ""){
             statements.push_back(newCopy);
         }
+        //print_map(value_map);
     }
 
     for(auto stmt: statements){
         //skip valuenumber copies that are not used
         if (stmt.res.find(VALPREFIX) != -1 && !used_map[stmt.res]){
-            cout<<"Skipping "<<get_statement(stmt)<<"\n";
+            // cout<<"Skipping "<<get_statement(stmt)<<"\n";
             continue;
         }
         cout<<get_statement(stmt)<<"\n";
         newStatements.push_back(stmt);
     }
+    /*
     for(auto stmt: newStatements){
         cout<<get_statement(stmt)<<"\n";
     }
+    */
 }
