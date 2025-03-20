@@ -1,0 +1,8 @@
+z := x / y 
+y := y + 1 
+t := x / y 
+z := 2 * 2 
+x := 3 + t 
+vAlUeNuM5 := x 
+k := 3 + z 
+m := vAlUeNuM5  // Replaced 3+vAlUeNuM3 with vAlUeNuM5
