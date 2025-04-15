@@ -10,7 +10,7 @@ def eliminate_last(A, b):
 
     Returns
     --------------------
-    A three tuple containing
+    A four tuple containing
 
     Tuple `(A',b')` for the new system of equation
 
@@ -19,6 +19,8 @@ def eliminate_last(A, b):
 
     List of list `[c_1,c_2...c_{n-1},b]` representing the lower bound of the
     last variable
+
+    Boolean `unsolvable` if some of the constraint is unsolvable
     """
     m = len(A)
     # there are no constraints to solve
@@ -29,11 +31,13 @@ def eliminate_last(A, b):
     LB = []
     A_prime = []
     b_prime = []
+    unsolvable = False
     for r in range(m):
         c_n = A[r][n-1]
         d = abs(c_n)
         if d == 0:
-            A_prime.append(A[r])
+            # A_prime.append(A[r][:n-1])
+            # b_prime.append(b[r])
             continue
         d = float(d)
         for c in range(n):
@@ -49,12 +53,20 @@ def eliminate_last(A, b):
             t.append(b[r])
             UB.append(t)
     for r1 in range(m):
+        if A[r1][n-1] == 0:
+            A_prime.append(A[r1][:n-1])
+            b_prime.append(b[r1])
+            continue
         for r2 in range(r1+1, m):
-            if A[r1][n-1] != A[r2][n-1]:
+            if A[r1][n-1] * A[r2][n-1] == -1:
                 t = [A[r1][c] + A[r2][c] for c in range(n-1)]
+                all_coeff_zero = True
+                for c in t:
+                    all_coeff_zero = all_coeff_zero and (c == 0)
+                unsolvable = unsolvable or (all_coeff_zero and (b[r1] + b[r2] < 0))
                 A_prime.append(t)
                 b_prime.append(b[r1]+b[r2])
-    return (A_prime, b_prime), UB, LB
+    return (A_prime, b_prime), UB, LB, unsolvable
 
 
 def printMatrix(M):
@@ -70,22 +82,49 @@ def printMatrix(M):
 
 
 if __name__ == '__main__':
-    A = [[-3, -4], [4, 7], [4, -7], [-2, 3]]
-    b = [-16, 56, 20, 9]
-    (a_prime, b_prime), ub, lb = eliminate_last(A, b)
-    printMatrix(a_prime)
-    print("------------------")
-    printMatrix([b_prime])
-    print("------------------")
-    printMatrix(ub)
-    print("------------------")
-    printMatrix(lb)
-    print("*************************")
-    (a_prime, b_prime), ub, lb = eliminate_last(a_prime, b_prime)
-    printMatrix(a_prime)
-    print("------------------")
-    printMatrix([b_prime])
-    print("------------------")
-    printMatrix(ub)
-    print("------------------")
-    printMatrix(lb)
+    n = int(input("Number of variables: "))
+    m = int(input("Number of constraints: "))
+    ip = input(f"Enter {n}x{m} = {n*m} space seperated entries of M in row major order:")
+    ip = ip.split(" ")
+    print(ip)
+    ip = [float(i) for i in ip]
+    A = [ip[i:i+n] for i in range(0, n*m, n)]
+    printMatrix(A)
+    ip = input(f"Enter {m} space separated entries of b :")
+    ip = ip.split(" ")
+    ip = [float(i) for i in ip]
+    b = ip
+    printMatrix([b])
+    LBs = []
+    UBs = []
+    arg_A = A
+    arg_b = b
+    print("---------Solution------------")
+    while n > 0:
+        (a_prime, b_prime), ub, lb, us = eliminate_last(arg_A, arg_b)
+        LBs.append(lb)
+        UBs.append(ub)
+        printMatrix(a_prime)
+        print("-----------")
+        printMatrix([b_prime])
+        print("-----------")
+        printMatrix(lb)
+        print("-----------")
+        printMatrix(ub)
+        print("***********")
+        arg_A = a_prime
+        arg_b = b_prime
+        m = len(arg_A)
+        n -= 1
+        if us:
+            break
+    if us:
+        print("Solution does not exist!")
+    else:
+        x_1_min = max(LBs[-1])[0] if (len(LBs[-1]) > 0) and (LBs[-1][0] is not list) else -500000000
+        x_1_max = min(UBs[-1])[0] if (len(UBs[-1]) > 0) and (UBs[-1][0] is not list) else 500000000
+        print(f"{x_1_min:.2f} <= x_1 <= {x_1_max:.2f}")
+        if x_1_max >= x_1_min:
+            print("Solutions exists")
+        else:
+            print("Solution does not exist")
