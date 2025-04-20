@@ -1,6 +1,6 @@
 def eliminate_last(A, b):
     """
-    Eliminate the last variable from a system of inequalities
+    Eliminate the last variable (x_n) from a system of inequalities
 
     Parameters
     --------------------
@@ -10,7 +10,7 @@ def eliminate_last(A, b):
 
     Returns
     --------------------
-    A four tuple containing
+    A five tuple containing
 
     Tuple `(A',b')` for the new system of equation
 
@@ -21,6 +21,9 @@ def eliminate_last(A, b):
     last variable
 
     Boolean `unsolvable` if some of the constraint is unsolvable
+
+    Boolean `exact_projection` if the projection for bounds of variable `x_n`
+    being eliminated were exact i.e. its coefficient was 1 for all inequalities
     """
     m = len(A)
     # there are no constraints to solve
@@ -32,20 +35,16 @@ def eliminate_last(A, b):
     A_prime = []
     b_prime = []
     unsolvable = False
+    exact_projection = True
     for r in range(m):
         c_n = A[r][n-1]
         d = abs(c_n)
         if d == 0:
-            # A_prime.append(A[r][:n-1])
-            # b_prime.append(b[r])
+            # Nothing for the bounds of x_n here
             continue
+        if d != 1:
+            exact_projection = False
         d = float(d)
-        """ coment: while doing integer FME,
-        we don't divide the actual coefficients, but only the bound equations
-        for c in range(n):
-            A[r][c] /= d
-        b[r] /= d
-        """
         c_n = A[r][n-1]
         if c_n < 0:
             t = [float(v)/d for v in A[r][:n-1]]
@@ -70,7 +69,7 @@ def eliminate_last(A, b):
                     abs(A[r2][n-1])*b[r1] + abs(A[r1][n-1])*b[r2] < 0))
                 A_prime.append(t)
                 b_prime.append(abs(A[r2][n-1]) * b[r1]+abs(A[r1][n-1]) * b[r2])
-    return (A_prime, b_prime), UB, LB, unsolvable
+    return (A_prime, b_prime), UB, LB, unsolvable, exact_projection
 
 
 def printMatrix(M):
@@ -147,10 +146,11 @@ if __name__ == '__main__':
     UBs = []
     arg_A = A
     arg_b = b
+    projections = []
     print("---------Steps------------")
     while n > 0:
         print(f"Eliminating x_{n}")
-        (a_prime, b_prime), ub, lb, us = eliminate_last(arg_A, arg_b)
+        (a_prime, b_prime), ub, lb, us, ep = eliminate_last(arg_A, arg_b)
         LBs.append(lb)
         UBs.append(ub)
         print("---------A'--------------------")
@@ -162,6 +162,10 @@ if __name__ == '__main__':
         print(f"--------x_{n} <= ub \\dot [{",".join([f"x_{i}" for i in range(1, n)])}{"," if n >1 else ""}{1}]------------")
         printMatrix(ub)
         print("*****************************************************")
+        if ep:
+            projections.append("exact")
+        else:
+            projections.append("inexact")
         arg_A = a_prime
         arg_b = b_prime
         m = len(arg_A)
@@ -169,14 +173,17 @@ if __name__ == '__main__':
         if us:
             break
     if us:
-        print("Solution does not exist!")
+        print("\nSolution does not exist!")
     else:
+        print("\nProjections -")
+        for i, p in enumerate(projections):
+            print(f"x_{i+1}: {p}")
         x_1_min = max(LBs[-1])[0] if (len(LBs[-1]) > 0) and (LBs[-1][0] is not list) else -500000000
         x_1_max = min(UBs[-1])[0] if (len(UBs[-1]) > 0) and (UBs[-1][0] is not list) else 500000000
-        print(f"{x_1_min:.2f} <= x_1 <= {x_1_max:.2f}")
+        print(f"\n{x_1_min:.2f} <= x_1 <= {x_1_max:.2f}")
         if x_1_max >= x_1_min and (x_1_max - x_1_min >= 1):
-            print("Solutions exists")
+            print("Solutions exists\n")
             res = get_loop_nest(LBs, UBs, ndim)
-            print("import math\n"+res)
+            print("\nPython loop nest:\n\nimport math\n"+res)
         else:
-            print("Solution does not exist")
+            print("\nSolution does not exist")

@@ -36,8 +36,7 @@ def eliminate_last(A, b):
         c_n = A[r][n-1]
         d = abs(c_n)
         if d == 0:
-            # A_prime.append(A[r][:n-1])
-            # b_prime.append(b[r])
+            # No limits for x_n here
             continue
         d = float(d)
         for c in range(n):
@@ -104,12 +103,13 @@ if __name__ == '__main__':
         (a_prime, b_prime), ub, lb, us = eliminate_last(arg_A, arg_b)
         LBs.append(lb)
         UBs.append(ub)
+        print("---------A'--------------------")
         printMatrix(a_prime)
-        print("-----------")
+        print("---------b'--------------------")
         printMatrix([b_prime])
-        print("-----------")
+        print(f"--------x_{n} >= lb \\dot [{",".join([f"x_{i}" for i in range(1, n)])}{"," if n >1 else ""}{1}]------------")
         printMatrix(lb)
-        print("-----------")
+        print(f"--------x_{n} <= ub \\dot [{",".join([f"x_{i}" for i in range(1, n)])}{"," if n >1 else ""}{1}]------------")
         printMatrix(ub)
         print("***********")
         arg_A = a_prime
@@ -119,12 +119,12 @@ if __name__ == '__main__':
         if us:
             break
     if us:
-        print("Solution does not exist!")
+        print("\nSolution does not exist!")
     else:
         x_1_min = max(LBs[-1])[0] if (len(LBs[-1]) > 0) and (LBs[-1][0] is not list) else -500000000
         x_1_max = min(UBs[-1])[0] if (len(UBs[-1]) > 0) and (UBs[-1][0] is not list) else 500000000
-        print(f"{x_1_min:.2f} <= x_1 <= {x_1_max:.2f}")
+        print(f"\n{x_1_min:.2f} <= x_1 <= {x_1_max:.2f}")
         if x_1_max >= x_1_min:
-            print("Solutions exists")
+            print("Solutions exists\n")
         else:
-            print("Solution does not exist")
+            print("\nSolution does not exist")
